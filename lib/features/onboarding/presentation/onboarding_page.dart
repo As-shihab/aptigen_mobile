@@ -20,7 +20,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   static const _steps = [
     _Step(
       heading: 'Your world,\none app.',
-      subtitle: '"Stays, marketplace, and food delivery —\neverything you love in one beautiful place."',
+      subtitle: '"Stays and a marketplace to shop —\neverything you love in one beautiful place."',
       gradient: [Color(0xFF2563EB), Color(0xFF4F46E5)],
     ),
     _Step(

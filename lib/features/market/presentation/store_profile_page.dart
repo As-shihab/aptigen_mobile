@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/network/http_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/media_url.dart';
+import '../../../shared/skeleton.dart';
 import '../data/market_service.dart';
 import '../models/product_model.dart';
 import '../models/store_model.dart';
@@ -9,8 +11,8 @@ import '../presentation/widgets/product_card.dart';
 import 'product_detail_page.dart';
 
 class StoreProfilePage extends StatefulWidget {
-  final StoreModel store;
-  const StoreProfilePage({super.key, required this.store});
+  final int storeId;
+  const StoreProfilePage({super.key, required this.storeId});
 
   @override
   State<StoreProfilePage> createState() => _StoreProfilePageState();
@@ -19,7 +21,7 @@ class StoreProfilePage extends StatefulWidget {
 class _StoreProfilePageState extends State<StoreProfilePage>
     with TickerProviderStateMixin {
   final _service = MarketService(ApiClient());
-  List<ProductModel> _products = [];
+  StorePageData? _data;
   bool _loading = true;
   bool _following = false;
   int _followerCount = 0;
@@ -30,7 +32,6 @@ class _StoreProfilePageState extends State<StoreProfilePage>
   @override
   void initState() {
     super.initState();
-    _followerCount = widget.store.followerCount;
     _followCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
@@ -38,7 +39,7 @@ class _StoreProfilePageState extends State<StoreProfilePage>
     _followScale = Tween<double>(begin: 1, end: 0.92).animate(
       CurvedAnimation(parent: _followCtrl, curve: Curves.easeInOut),
     );
-    _loadProducts();
+    _load();
   }
 
   @override
@@ -47,15 +48,61 @@ class _StoreProfilePageState extends State<StoreProfilePage>
     super.dispose();
   }
 
-  Future<void> _loadProducts() async {
+  Future<void> _load() async {
+    setState(() => _loading = true);
     try {
-      final products = await _service.getProductsBySeller(widget.store.id);
-      if (mounted) setState(() { _products = products; _loading = false; });
+      final data = await _service.getStore(widget.storeId);
+      if (!mounted) return;
+      setState(() {
+        // The store endpoint's listings don't carry an embedded
+        // store_profile (unlike /listings and /listing/:id) — we already
+        // know the seller here, so stamp it on before it's handed to
+        // ProductDetailPage (otherwise "Sold by" would fall back to
+        // "Aptigen Marketplace" when opened from this screen).
+        _data = data == null
+            ? null
+            : StorePageData(
+                store: data.store,
+                followerCount: data.followerCount,
+                listings: data.listings
+                    .map((p) => ProductModel(
+                          id: p.id,
+                          name: p.name,
+                          description: p.description,
+                          price: p.price,
+                          originalPrice: p.originalPrice,
+                          category: p.category,
+                          categoryId: p.categoryId,
+                          images: p.images,
+                          quantity: p.quantity,
+                          minOrder: p.minOrder,
+                          maxOrder: p.maxOrder,
+                          condition: p.condition,
+                          listingType: p.listingType,
+                          tags: p.tags,
+                          city: p.city,
+                          country: p.country,
+                          isFeatured: p.isFeatured,
+                          currency: p.currency,
+                          sellerId: data.store.id,
+                          sellerName: data.store.storeName,
+                          sellerLogoUrl: data.store.logoUrl,
+                          sellerAccentColor: data.store.accentColor,
+                          sellerVerified: data.store.isVerified,
+                          sellerPhone: data.store.phone,
+                        ))
+                    .toList(),
+              );
+        _followerCount = data?.followerCount ?? 0;
+        _loading = false;
+      });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  // Follow is optimistic/client-only — the public store endpoint has no
+  // follow mutation, same as frontend/.../store/store.client.tsx's toggleFollow.
   void _toggleFollow() async {
     await _followCtrl.forward();
     await _followCtrl.reverse();
@@ -74,7 +121,52 @@ class _StoreProfilePageState extends State<StoreProfilePage>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final store = widget.store;
+
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.slate50,
+        body: const _StoreSkeleton(),
+      );
+    }
+
+    final data = _data;
+    if (data == null) {
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.slate50,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: _CircleBtn(
+            icon: Icons.arrow_back_ios_new_rounded,
+            isDark: isDark,
+            onTap: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.storefront_outlined,
+                  color: AppColors.slate300, size: 56),
+              const SizedBox(height: 12),
+              Text('Store not found',
+                  style: GoogleFonts.poppins(
+                      color: AppColors.slate500,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text('This store may be inactive or no longer exists.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                      color: AppColors.slate400, fontSize: 13)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final store = data.store;
+    final products = data.listings;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.slate50,
@@ -111,17 +203,9 @@ class _StoreProfilePageState extends State<StoreProfilePage>
               child: Row(
                 children: [
                   _StatItem(
-                    value: '${_products.isEmpty ? store.productCount : _products.length}',
+                    value: '${products.length}',
                     label: 'Products',
                     isDark: isDark,
-                  ),
-                  _Divider(isDark: isDark),
-                  _StatItem(
-                    value: store.rating.toStringAsFixed(1),
-                    label: 'Rating',
-                    isDark: isDark,
-                    icon: Icons.star_rounded,
-                    iconColor: AppColors.amber400,
                   ),
                   _Divider(isDark: isDark),
                   _StatItem(
@@ -135,6 +219,16 @@ class _StoreProfilePageState extends State<StoreProfilePage>
                     label: 'Member',
                     isDark: isDark,
                   ),
+                  if (store.isVerified) ...[
+                    _Divider(isDark: isDark),
+                    _StatItem(
+                      value: 'Verified',
+                      label: 'Seller',
+                      isDark: isDark,
+                      icon: Icons.verified_rounded,
+                      iconColor: AppColors.blue600,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -158,14 +252,14 @@ class _StoreProfilePageState extends State<StoreProfilePage>
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
                       color: AppColors.blue600.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${_products.length}',
+                      '${products.length}',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -179,14 +273,7 @@ class _StoreProfilePageState extends State<StoreProfilePage>
           ),
 
           // ── Products grid ──────────────────────────────────────────────
-          if (_loading)
-            const SliverFillRemaining(
-              child: Center(
-                child: CircularProgressIndicator(
-                    color: AppColors.blue600, strokeWidth: 2),
-              ),
-            )
-          else if (_products.isEmpty)
+          if (products.isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Column(
@@ -208,8 +295,7 @@ class _StoreProfilePageState extends State<StoreProfilePage>
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
               sliver: SliverGrid(
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
@@ -217,17 +303,16 @@ class _StoreProfilePageState extends State<StoreProfilePage>
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (_, i) => ProductCard(
-                    product: _products[i],
+                    product: products[i],
                     isDark: isDark,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            ProductDetailPage(product: _products[i]),
+                        builder: (_) => ProductDetailPage(product: products[i]),
                       ),
                     ),
                   ),
-                  childCount: _products.length,
+                  childCount: products.length,
                 ),
               ),
             ),
@@ -238,6 +323,62 @@ class _StoreProfilePageState extends State<StoreProfilePage>
 }
 
 // ─── Store Header ────────────────────────────────────────────────────────────
+
+// ─── Store Skeleton ──────────────────────────────────────────────────────
+
+class _StoreSkeleton extends StatelessWidget {
+  const _StoreSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Skeleton(height: 240),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            child: Row(
+              children: List.generate(
+                3,
+                (i) => Expanded(
+                  child: Column(
+                    children: [
+                      Skeleton(height: 15, width: 40),
+                      const SizedBox(height: 6),
+                      Skeleton(height: 10, width: 50),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: Skeleton(height: 17, width: 100),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 4,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.72,
+              ),
+              itemBuilder: (_, __) =>
+                  Skeleton(borderRadius: BorderRadius.circular(20)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _StoreHeader extends StatelessWidget {
   final StoreModel store;
@@ -258,6 +399,7 @@ class _StoreHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final logoUrl = MediaUrl.resolve(store.logoUrl, view: 'small');
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -285,6 +427,7 @@ class _StoreHeader extends StatelessWidget {
                   Container(
                     width: 72,
                     height: 72,
+                    clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
@@ -292,16 +435,29 @@ class _StoreHeader extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.6),
                           width: 2.5),
                     ),
-                    child: Center(
-                      child: Text(
-                        store.initials,
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                    child: logoUrl != null
+                        ? Image.network(logoUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                                  child: Text(
+                                    store.initials,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ))
+                        : Center(
+                            child: Text(
+                              store.initials,
+                              style: GoogleFonts.poppins(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -310,44 +466,50 @@ class _StoreHeader extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              store.name,
-                              style: GoogleFonts.poppins(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
+                            Expanded(
+                              child: Text(
+                                store.storeName,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.25),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.verified_rounded,
-                                      color: Colors.white, size: 11),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    'Verified',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
+                            if (store.isVerified) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.verified_rounded,
+                                        color: Colors.white, size: 11),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'Verified',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
-                        if (store.description != null)
+                        if ((store.tagline ?? store.description) != null)
                           Text(
-                            store.description!,
+                            store.tagline ?? store.description!,
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               color: Colors.white.withValues(alpha: 0.8),
@@ -355,6 +517,19 @@ class _StoreHeader extends StatelessWidget {
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
+                          ),
+                        if (store.city != null || store.country != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              [store.city, store.country]
+                                  .where((e) => e != null && e.isNotEmpty)
+                                  .join(', '),
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                color: Colors.white.withValues(alpha: 0.6),
+                              ),
+                            ),
                           ),
                       ],
                     ),
@@ -383,9 +558,8 @@ class _StoreHeader extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: following
-                                ? Colors.white
-                                : store.gradient.first,
+                            color:
+                                following ? Colors.white : store.gradient.first,
                           ),
                         ),
                       ),
@@ -499,8 +673,7 @@ class _CircleBtn extends StatelessWidget {
           ],
         ),
         child: Icon(icon,
-            size: 16,
-            color: isDark ? AppColors.slate300 : AppColors.slate700),
+            size: 16, color: isDark ? AppColors.slate300 : AppColors.slate700),
       ),
     );
   }

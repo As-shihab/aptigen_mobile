@@ -55,17 +55,6 @@ class AptigenAppBar extends StatelessWidget {
             children: [
               // Logo
               Image.asset('assets/images/logo.png', width: 32, height: 32),
-              const SizedBox(width: 8),
-              Text(
-                'Aptigen',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                  letterSpacing: -0.5,
-                  color:
-                      isDark ? AppColors.darkFg : AppColors.lightFg,
-                ),
-              ),
               const Spacer(),
               if (onSearch != null)
                 _IconBtn(
@@ -78,8 +67,8 @@ class AptigenAppBar extends StatelessWidget {
               ],
               if (showSignIn)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppColors.blue600,
                     borderRadius: BorderRadius.circular(12),

@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
-import '../foods/presentation/foods_page.dart';
+import '../jobs/presentation/jobs_page.dart';
 import '../market/presentation/market_page.dart';
 import '../profile/presentation/profile_page.dart';
 import '../stays/presentation/stays_page.dart';
@@ -22,14 +22,14 @@ class _HomeShellState extends State<HomeShell> with TickerProviderStateMixin {
   static const _pages = [
     StaysPage(),
     MarketPage(),
-    FoodsPage(),
+    JobsPage(),
     ProfilePage(),
   ];
 
   static const _navItems = [
     (icon: Icons.hotel_rounded, activeIcon: Icons.hotel_rounded, label: 'Stays'),
     (icon: Icons.storefront_outlined, activeIcon: Icons.storefront_rounded, label: 'Market'),
-    (icon: Icons.restaurant_menu_outlined, activeIcon: Icons.restaurant_menu_rounded, label: 'Foods'),
+    (icon: Icons.work_outline_rounded, activeIcon: Icons.work_rounded, label: 'Jobs'),
     (icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
   ];
 

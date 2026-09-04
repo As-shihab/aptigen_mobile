@@ -1,8 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/network/http_client.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/media_url.dart';
 import '../../data/cart_store.dart';
+import '../../data/market_service.dart';
 import '../../models/product_model.dart';
 
 class ProductCard extends StatelessWidget {
@@ -18,11 +21,16 @@ class ProductCard extends StatelessWidget {
   });
 
   static const _catColors = {
-    'Tech': [Color(0xFF2563EB), Color(0xFF4F46E5)],
+    'Electronics': [Color(0xFF2563EB), Color(0xFF4F46E5)],
     'Audio': [Color(0xFF7C3AED), Color(0xFF9333EA)],
     'Wearables': [Color(0xFF059669), Color(0xFF0D9488)],
-    'Lifestyle': [Color(0xFFD97706), Color(0xFFEA580C)],
+    'Fashion': [Color(0xFFDB2777), Color(0xFFBE185D)],
     'Photography': [Color(0xFFDB2777), Color(0xFF9333EA)],
+    'Home & Living': [Color(0xFFD97706), Color(0xFFEA580C)],
+    'Beauty & Health': [Color(0xFFEC4899), Color(0xFFDB2777)],
+    'Sports & Outdoors': [Color(0xFF16A34A), Color(0xFF15803D)],
+    'Groceries': [Color(0xFF65A30D), Color(0xFF4D7C0F)],
+    'Books & Media': [Color(0xFF0284C7), Color(0xFF0369A1)],
   };
 
   @override
@@ -30,6 +38,7 @@ class ProductCard extends StatelessWidget {
     final discount = product.effectiveDiscount;
     final colors = _catColors[product.category] ??
         [AppColors.slate600, AppColors.slate700];
+    final coverImage = MediaUrl.resolve(product.coverImage, view: 'small');
 
     return GestureDetector(
       onTap: onTap,
@@ -63,9 +72,9 @@ class ProductCard extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(20)),
-                      child: product.coverImage != null
+                      child: coverImage != null
                           ? CachedNetworkImage(
-                              imageUrl: product.coverImage!,
+                              imageUrl: coverImage,
                               width: double.infinity,
                               height: double.infinity,
                               fit: BoxFit.cover,
@@ -133,56 +142,25 @@ class ProductCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (product.brand != null)
-                          Text(
-                            product.brand!,
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              color: AppColors.blue600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        Text(
-                          product.name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : AppColors.slate900,
-                            height: 1.3,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    if (product.rating > 0)
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded,
-                              color: AppColors.amber400, size: 12),
-                          const SizedBox(width: 2),
-                          Text(
-                            product.rating.toStringAsFixed(1),
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? AppColors.slate300 : AppColors.slate700,
-                            ),
-                          ),
-                          if (product.reviewCount > 0) ...[
-                            Text(
-                              ' (${product.reviewCount})',
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                color: AppColors.slate500,
-                              ),
-                            ),
-                          ],
-                        ],
+                    Text(
+                      product.name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : AppColors.slate900,
+                        height: 1.3,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      product.inStock ? '${product.quantity} in stock' : 'Out of stock',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: product.inStock ? AppColors.emerald500 : AppColors.rose500,
+                      ),
+                    ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -215,26 +193,30 @@ class ProductCard extends StatelessWidget {
                             final inCart = items.any(
                                 (e) => e.product.id == product.id);
                             return GestureDetector(
-                              onTap: () {
-                                CartStore.instance.add(product);
-                                ScaffoldMessenger.of(context)
-                                    .clearSnackBars();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '${product.name} added to cart',
-                                      style: GoogleFonts.poppins(
-                                          fontSize: 13),
-                                    ),
-                                    duration: const Duration(seconds: 1),
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
-                                    backgroundColor: AppColors.slate800,
-                                  ),
-                                );
-                              },
+                              onTap: !product.inStock
+                                  ? null
+                                  : () {
+                                      CartStore.instance.add(product);
+                                      MarketService(ApiClient())
+                                          .trackEvent(product.id, 'cart_add');
+                                      ScaffoldMessenger.of(context)
+                                          .clearSnackBars();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            '${product.name} added to cart',
+                                            style: GoogleFonts.poppins(
+                                                fontSize: 13),
+                                          ),
+                                          duration: const Duration(seconds: 1),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12)),
+                                          backgroundColor: AppColors.slate800,
+                                        ),
+                                      );
+                                    },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 width: 30,
@@ -255,9 +237,11 @@ class ProductCard extends StatelessWidget {
                                       ? Icons.check_rounded
                                       : Icons.add_rounded,
                                   size: 16,
-                                  color: inCart
-                                      ? Colors.white
-                                      : AppColors.blue600,
+                                  color: !product.inStock
+                                      ? AppColors.slate400
+                                      : (inCart
+                                          ? Colors.white
+                                          : AppColors.blue600),
                                 ),
                               ),
                             );
@@ -283,11 +267,16 @@ class _Placeholder extends StatelessWidget {
   const _Placeholder({required this.colors, this.category});
 
   static const _catIcons = {
-    'Tech': Icons.laptop_mac_rounded,
+    'Electronics': Icons.laptop_mac_rounded,
     'Audio': Icons.headphones_rounded,
     'Wearables': Icons.watch_rounded,
-    'Lifestyle': Icons.auto_awesome_rounded,
+    'Fashion': Icons.checkroom_rounded,
     'Photography': Icons.camera_alt_rounded,
+    'Home & Living': Icons.chair_rounded,
+    'Beauty & Health': Icons.auto_awesome_rounded,
+    'Sports & Outdoors': Icons.fitness_center_rounded,
+    'Groceries': Icons.shopping_basket_rounded,
+    'Books & Media': Icons.menu_book_rounded,
   };
 
   @override

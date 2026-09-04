@@ -249,7 +249,7 @@ class _StaysPageState extends State<StaysPage> {
                                 crossAxisCount: 2,
                                 crossAxisSpacing: 12,
                                 mainAxisSpacing: 12,
-                                childAspectRatio: 0.70,
+                                childAspectRatio: 0.62,
                               ),
                               delegate: SliverChildBuilderDelegate(
                                 (_, i) => StayCard(

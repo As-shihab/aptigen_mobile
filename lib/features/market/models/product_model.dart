@@ -1,19 +1,31 @@
+/// Mirrors the `ApiListing` shape returned by GET /api/public/market/listings
+/// and /listing/:id (cloud's market-public.service.ts, a market_listings row)
+/// — see frontend/app/lib/marketProduct.ts for the same contract on web.
 class ProductModel {
   final int id;
-  final String name;
+  final String name; // listing.title
   final String? description;
   final double price;
-  final double? originalPrice;
-  final String? category;
-  final double rating;
-  final int reviewCount;
-  final List<String> images;
-  final String? brand;
-  final bool inStock;
-  final int? discountPercent;
+  final double? originalPrice; // compare_price, only when it beats price
+  final String? category; // category.name
+  final int? categoryId;
+  final List<String> images; // thumbnail_url + medias, deduped
+  final int quantity;
+  final int minOrder;
+  final int? maxOrder;
+  final String condition; // "new" | "used" | "refurbished"
+  final String listingType; // "fixed" | "auction" | "negotiable"
+  final List<String> tags;
+  final String? city;
+  final String? country;
   final bool isFeatured;
-  final int sellerId;
+  final String currency;
+  final int sellerId; // store_profile.id, 0 when none attached
   final String sellerName;
+  final String? sellerLogoUrl;
+  final String? sellerAccentColor;
+  final bool sellerVerified;
+  final String? sellerPhone;
 
   const ProductModel({
     required this.id,
@@ -22,50 +34,89 @@ class ProductModel {
     required this.price,
     this.originalPrice,
     this.category,
-    this.rating = 0.0,
-    this.reviewCount = 0,
+    this.categoryId,
     this.images = const [],
-    this.brand,
-    this.inStock = true,
-    this.discountPercent,
+    this.quantity = 0,
+    this.minOrder = 1,
+    this.maxOrder,
+    this.condition = 'new',
+    this.listingType = 'fixed',
+    this.tags = const [],
+    this.city,
+    this.country,
     this.isFeatured = false,
+    this.currency = 'USD',
     this.sellerId = 0,
-    this.sellerName = 'Aptigen Store',
+    this.sellerName = 'Aptigen Marketplace',
+    this.sellerLogoUrl,
+    this.sellerAccentColor,
+    this.sellerVerified = false,
+    this.sellerPhone,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
-    List<String> parseImages(dynamic raw) {
-      if (raw == null) return [];
-      if (raw is List) return raw.map((e) => e.toString()).toList();
-      if (raw is String && raw.isNotEmpty) return [raw];
-      return [];
+    List<String> parseImages() {
+      final urls = <String>[];
+      final thumb = json['thumbnail_url'] as String?;
+      if (thumb != null && thumb.isNotEmpty) urls.add(thumb);
+      final medias = json['medias'] as List?;
+      if (medias != null) {
+        for (final m in medias) {
+          final url = (m as Map)['url'] as String?;
+          if (url != null && url.isNotEmpty && !urls.contains(url)) {
+            urls.add(url);
+          }
+        }
+      }
+      return urls;
     }
+
+    List<String> parseTags() {
+      final raw = json['tags'] as String?;
+      if (raw == null || raw.isEmpty) return [];
+      return raw.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+    }
+
+    final category = json['category'] as Map<String, dynamic>?;
+    final store = json['store_profile'] as Map<String, dynamic>?;
+    final price = (json['price'] as num?)?.toDouble() ?? 0.0;
+    final comparePrice = (json['compare_price'] as num?)?.toDouble();
 
     return ProductModel(
       id: json['id'] as int? ?? 0,
-      name: json['name'] as String? ?? '',
+      name: json['title'] as String? ?? '',
       description: json['description'] as String?,
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      originalPrice: (json['original_price'] as num?)?.toDouble(),
-      category: json['category'] as String?,
-      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
-      reviewCount: json['review_count'] as int? ?? 0,
-      images: parseImages(json['images']),
-      brand: json['brand'] as String?,
-      inStock: json['in_stock'] as bool? ?? true,
-      discountPercent: json['discount_percent'] as int?,
+      price: price,
+      originalPrice: (comparePrice != null && comparePrice > price) ? comparePrice : null,
+      category: category?['name'] as String?,
+      categoryId: category?['id'] as int?,
+      images: parseImages(),
+      quantity: json['quantity'] as int? ?? 0,
+      minOrder: json['min_order'] as int? ?? 1,
+      maxOrder: json['max_order'] as int?,
+      condition: json['condition'] as String? ?? 'new',
+      listingType: json['listing_type'] as String? ?? 'fixed',
+      tags: parseTags(),
+      city: json['city'] as String?,
+      country: json['country'] as String?,
       isFeatured: json['is_featured'] as bool? ?? false,
-      sellerId: json['seller_id'] as int? ?? 0,
-      sellerName: json['seller_name'] as String? ?? 'Aptigen Store',
+      currency: json['currency'] as String? ?? 'USD',
+      sellerId: store?['id'] as int? ?? 0,
+      sellerName: store?['store_name'] as String? ?? 'Aptigen Marketplace',
+      sellerLogoUrl: store?['logo_url'] as String?,
+      sellerAccentColor: store?['accent_color'] as String?,
+      sellerVerified: store?['is_verified'] as bool? ?? false,
+      sellerPhone: store?['phone'] as String?,
     );
   }
 
   String? get coverImage => images.isNotEmpty ? images.first : null;
+  bool get inStock => quantity > 0;
 
   int? get effectiveDiscount {
     if (originalPrice != null && originalPrice! > price) {
       return ((originalPrice! - price) / originalPrice! * 100).round();
     }
-    return discountPercent;
+    return null;
   }
 }

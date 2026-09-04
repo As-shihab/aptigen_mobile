@@ -1,11 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/network/http_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/media_url.dart';
 import '../data/cart_store.dart';
 import '../data/market_service.dart';
 import '../models/product_model.dart';
-import '../models/store_model.dart';
 import 'store_profile_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -18,25 +19,28 @@ class ProductDetailPage extends StatefulWidget {
 
 class _ProductDetailPageState extends State<ProductDetailPage>
     with TickerProviderStateMixin {
+  final _service = MarketService(ApiClient());
   late final AnimationController _slideCtrl;
   late final Animation<Offset> _slideAnim;
   late final Animation<double> _fadeAnim;
-  int _imgIndex = 0;
 
   static const _catColors = {
-    'Tech': [Color(0xFF2563EB), Color(0xFF4F46E5)],
+    'Electronics': [Color(0xFF2563EB), Color(0xFF4F46E5)],
     'Audio': [Color(0xFF7C3AED), Color(0xFF9333EA)],
     'Wearables': [Color(0xFF059669), Color(0xFF0D9488)],
-    'Lifestyle': [Color(0xFFD97706), Color(0xFFEA580C)],
+    'Fashion': [Color(0xFFDB2777), Color(0xFFBE185D)],
     'Photography': [Color(0xFFDB2777), Color(0xFF9333EA)],
+    'Home & Living': [Color(0xFFD97706), Color(0xFFEA580C)],
+    'Beauty & Health': [Color(0xFFEC4899), Color(0xFFDB2777)],
+    'Sports & Outdoors': [Color(0xFF16A34A), Color(0xFF15803D)],
+    'Groceries': [Color(0xFF65A30D), Color(0xFF4D7C0F)],
+    'Books & Media': [Color(0xFF0284C7), Color(0xFF0369A1)],
   };
 
-  static const _catIcons = {
-    'Tech': Icons.laptop_mac_rounded,
-    'Audio': Icons.headphones_rounded,
-    'Wearables': Icons.watch_rounded,
-    'Lifestyle': Icons.auto_awesome_rounded,
-    'Photography': Icons.camera_alt_rounded,
+  static const _conditionLabels = {
+    'new': 'New',
+    'used': 'Used',
+    'refurbished': 'Refurbished',
   };
 
   @override
@@ -56,6 +60,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       curve: const Interval(0, 0.7, curve: Curves.easeOut),
     ));
     _slideCtrl.forward();
+    _service.trackEvent(widget.product.id, 'view');
   }
 
   @override
@@ -77,23 +82,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       backgroundColor: isDark ? AppColors.darkBg : AppColors.white,
       body: Stack(
         children: [
-          // Image hero
+          // Image gallery
           SizedBox(
             height: size.height * 0.46,
             width: double.infinity,
-            child: Hero(
-              tag: 'product-image-${product.id}',
-              child: product.coverImage != null
-                  ? CachedNetworkImage(
-                      imageUrl: product.coverImage!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) =>
-                          _PlaceholderBg(colors: colors, category: product.category),
-                      errorWidget: (_, __, ___) =>
-                          _PlaceholderBg(colors: colors, category: product.category),
-                    )
-                  : _PlaceholderBg(colors: colors, category: product.category),
-            ),
+            child: _ProductImageGallery(product: product, colors: colors),
           ),
           // Gradient fade bottom of image
           Positioned(
@@ -184,30 +177,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Brand + category row
+                              // Category + condition row
                               Row(
                                 children: [
-                                  if (product.brand != null) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.blue600
-                                            .withValues(alpha: 0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        product.brand!,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.blue600,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
                                   if (product.category != null)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
@@ -229,6 +201,28 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                         ),
                                       ),
                                     ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? AppColors.slate800
+                                          : AppColors.slate100,
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      _conditionLabels[product.condition] ??
+                                          product.condition,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? AppColors.slate400
+                                            : AppColors.slate600,
+                                      ),
+                                    ),
+                                  ),
                                   if (discount != null) ...[
                                     const SizedBox(width: 8),
                                     Container(
@@ -265,45 +259,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                   height: 1.2,
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              // Rating row
-                              if (product.rating > 0)
-                                Row(
-                                  children: [
-                                    ...List.generate(5, (i) {
-                                      return Icon(
-                                        i < product.rating.floor()
-                                            ? Icons.star_rounded
-                                            : (i < product.rating
-                                                ? Icons.star_half_rounded
-                                                : Icons.star_outline_rounded),
-                                        color: AppColors.amber400,
-                                        size: 16,
-                                      );
-                                    }),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      product.rating.toStringAsFixed(1),
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: isDark
-                                            ? AppColors.slate300
-                                            : AppColors.slate700,
-                                      ),
-                                    ),
-                                    if (product.reviewCount > 0) ...[
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '(${product.reviewCount} reviews)',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          color: AppColors.slate500,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
                               const SizedBox(height: 16),
                               // Price
                               Row(
@@ -352,7 +307,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                   const SizedBox(width: 6),
                                   Text(
                                     product.inStock
-                                        ? 'In Stock'
+                                        ? '${product.quantity} in stock'
                                         : 'Out of Stock',
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
@@ -364,6 +319,23 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                   ),
                                 ],
                               ),
+                              if (product.city != null || product.country != null) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.location_on_outlined,
+                                        size: 14, color: AppColors.slate400),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Ships from ${[product.city, product.country].where((e) => e != null && e.isNotEmpty).join(', ')}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: AppColors.slate500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               const SizedBox(height: 20),
                               // Divider
                               Divider(
@@ -395,6 +367,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                 ),
                                 const SizedBox(height: 20),
                               ],
+                              // Product details — only rows with real data render
+                              _ProductDetailsSection(product: product, isDark: isDark),
+                              const SizedBox(height: 20),
                               // Sold by
                               _StoreSection(
                                   product: product, isDark: isDark),
@@ -420,6 +395,118 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Image Gallery ──────────────────────────────────────────────────────────
+
+class _ProductImageGallery extends StatefulWidget {
+  final ProductModel product;
+  final List<Color> colors;
+  const _ProductImageGallery({required this.product, required this.colors});
+
+  @override
+  State<_ProductImageGallery> createState() => _ProductImageGalleryState();
+}
+
+class _ProductImageGalleryState extends State<_ProductImageGallery> {
+  final _pageCtrl = PageController();
+  int _current = 0;
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final images = widget.product.images;
+    final placeholder = _PlaceholderBg(
+      colors: widget.colors,
+      category: widget.product.category,
+    );
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        images.isEmpty
+            ? Hero(
+                tag: 'product-image-${widget.product.id}',
+                child: placeholder,
+              )
+            : PageView.builder(
+                controller: _pageCtrl,
+                itemCount: images.length,
+                onPageChanged: (i) => setState(() => _current = i),
+                itemBuilder: (_, i) {
+                  final url = MediaUrl.resolve(images[i], view: 'large') ?? images[i];
+                  final image = CachedNetworkImage(
+                    imageUrl: url,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => placeholder,
+                    errorWidget: (_, __, ___) => placeholder,
+                  );
+                  return i == 0
+                      ? Hero(
+                          tag: 'product-image-${widget.product.id}',
+                          child: image,
+                        )
+                      : image;
+                },
+              ),
+
+        // Page dots
+        if (images.length > 1)
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(images.length, (i) {
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: i == _current ? 20 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: i == _current
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+
+        // Image count badge
+        if (images.length > 1)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${_current + 1} / ${images.length}',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -486,30 +573,37 @@ class _BottomBar extends StatelessWidget {
                           .qty
                       : 0;
                   return GestureDetector(
-                    onTap: () {
-                      CartStore.instance.add(product);
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Added to cart',
-                              style: GoogleFonts.poppins(fontSize: 13)),
-                          duration: const Duration(seconds: 1),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          backgroundColor: AppColors.slate800,
-                        ),
-                      );
-                    },
+                    onTap: !product.inStock
+                        ? null
+                        : () {
+                            CartStore.instance.add(product);
+                            MarketService(ApiClient())
+                                .trackEvent(product.id, 'cart_add');
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Added to cart',
+                                    style: GoogleFonts.poppins(fontSize: 13)),
+                                duration: const Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                backgroundColor: AppColors.slate800,
+                              ),
+                            );
+                          },
                     child: Container(
                       height: 52,
                       decoration: BoxDecoration(
-                        gradient: AppGradients.primaryBtn,
+                        gradient: product.inStock ? AppGradients.primaryBtn : null,
+                        color: product.inStock ? null : AppColors.slate300,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Center(
                         child: Text(
-                          inCart ? 'Add More (${qty})' : 'Add to Cart',
+                          !product.inStock
+                              ? 'Out of Stock'
+                              : (inCart ? 'Add More ($qty)' : 'Add to Cart'),
                           style: GoogleFonts.poppins(
                             color: Colors.white,
                             fontSize: 15,
@@ -585,149 +679,224 @@ class _HighlightRow extends StatelessWidget {
   }
 }
 
+// ─── Product Details ────────────────────────────────────────────────────────
+
+class _ProductDetailsSection extends StatelessWidget {
+  final ProductModel product;
+  final bool isDark;
+  const _ProductDetailsSection({required this.product, required this.isDark});
+
+  static const _conditionLabels = {
+    'new': 'New',
+    'used': 'Used',
+    'refurbished': 'Refurbished',
+  };
+  static const _listingTypeLabels = {
+    'fixed': 'Fixed price',
+    'auction': 'Auction',
+    'negotiable': 'Negotiable',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <(String, String)>[
+      if (product.category != null) ('Category', product.category!),
+      ('Condition', _conditionLabels[product.condition] ?? product.condition),
+      ('Listing type', _listingTypeLabels[product.listingType] ?? product.listingType),
+      if (product.minOrder > 1) ('Minimum order', '${product.minOrder} units'),
+      if (product.maxOrder != null) ('Maximum order', '${product.maxOrder} units'),
+      if (product.city != null || product.country != null)
+        ('Location', [product.city, product.country].where((e) => e != null && e.isNotEmpty).join(', ')),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Product details',
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: isDark ? Colors.white : AppColors.slate900,
+          ),
+        ),
+        const SizedBox(height: 10),
+        ...rows.map((r) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(r.$1,
+                      style: GoogleFonts.poppins(
+                          fontSize: 13, color: AppColors.slate500)),
+                  Text(r.$2,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : AppColors.slate800,
+                      )),
+                ],
+              ),
+            )),
+        if (product.tags.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: product.tags
+                .map((tag) => Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue600.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        tag,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.blue600,
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 // ─── Store Section ─────────────────────────────────────────────────────────
 
-class _StoreSection extends StatefulWidget {
+// Compact "sold by" card — matches the web view.client.tsx inline seller
+// card: logo/initials, name, verified badge and a visit-store link. No
+// rating/follower stat here since the listing payload doesn't carry one
+// (that lives on the full store profile fetched by StoreProfilePage).
+class _StoreSection extends StatelessWidget {
   final ProductModel product;
   final bool isDark;
   const _StoreSection({required this.product, required this.isDark});
 
-  @override
-  State<_StoreSection> createState() => _StoreSectionState();
-}
-
-class _StoreSectionState extends State<_StoreSection> {
-  bool _following = false;
-
-  StoreModel? get _store =>
-      MarketService.getStoreById(widget.product.sellerId);
-
   void _goToStore(BuildContext context) {
-    final store = _store;
-    if (store == null) return;
+    if (product.sellerId == 0) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => StoreProfilePage(store: store)),
+      MaterialPageRoute(
+        builder: (_) => StoreProfilePage(storeId: product.sellerId),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = widget.isDark;
-    final product = widget.product;
-    final store = _store;
-    final gradient = store?.gradient ??
-        [AppColors.slate600, AppColors.slate700];
+    final logoUrl = MediaUrl.resolve(product.sellerLogoUrl, view: 'small');
+    final accent = product.sellerAccentColor;
+    final accentColor = accent != null && RegExp(r'^#?[0-9a-fA-F]{6}$').hasMatch(accent)
+        ? Color(int.parse('FF${accent.replaceAll('#', '')}', radix: 16))
+        : AppColors.slate600;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.slate800 : AppColors.slate50,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-            color: isDark ? AppColors.slate700 : AppColors.slate100),
-      ),
-      child: Row(
-        children: [
-          // Avatar circle
-          GestureDetector(
-            onTap: () => _goToStore(context),
-            child: Container(
+    return GestureDetector(
+      onTap: () => _goToStore(context),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.slate800 : AppColors.slate50,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+              color: isDark ? AppColors.slate700 : AppColors.slate100),
+        ),
+        child: Row(
+          children: [
+            // Avatar circle
+            Container(
               width: 46,
               height: 46,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: gradient,
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  store?.initials ??
-                      product.sellerName
-                          .substring(0, product.sellerName.length >= 2 ? 2 : 1)
-                          .toUpperCase(),
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
+              child: logoUrl != null
+                  ? Image.network(logoUrl, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Center(
+                            child: Text(
+                              product.sellerName
+                                  .substring(0, product.sellerName.length >= 2 ? 2 : 1)
+                                  .toUpperCase(),
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ))
+                  : Center(
+                      child: Text(
+                        product.sellerName
+                            .substring(0, product.sellerName.length >= 2 ? 2 : 1)
+                            .toUpperCase(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
             ),
-          ),
-          const SizedBox(width: 12),
-          // Store info
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _goToStore(context),
+            const SizedBox(width: 12),
+            // Store info
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text('Sold by',
+                      style: GoogleFonts.poppins(
+                          fontSize: 11, color: AppColors.slate500)),
                   Row(
                     children: [
-                      Text(
-                        product.sellerName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : AppColors.slate900,
+                      Flexible(
+                        child: Text(
+                          product.sellerName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : AppColors.slate900,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.verified_rounded,
-                          size: 14, color: AppColors.blue600),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      const Icon(Icons.star_rounded,
-                          size: 12, color: AppColors.amber400),
-                      const SizedBox(width: 3),
-                      Text(
-                        store != null
-                            ? '${store.rating.toStringAsFixed(1)} · ${store.productCount} products'
-                            : 'Official Store',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: AppColors.slate500,
-                        ),
-                      ),
+                      if (product.sellerVerified) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.verified_rounded,
+                            size: 14, color: AppColors.blue600),
+                      ],
                     ],
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          // Follow button
-          GestureDetector(
-            onTap: () => setState(() => _following = !_following),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: _following ? null : AppGradients.primaryBtn,
-                color: _following
-                    ? (isDark ? AppColors.slate700 : AppColors.slate100)
-                    : null,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                _following ? 'Following' : 'Follow',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: _following
-                      ? (isDark ? AppColors.slate300 : AppColors.slate600)
-                      : Colors.white,
+            if (product.sellerId != 0) ...[
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.slate700 : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: isDark ? AppColors.slate600 : AppColors.slate200),
+                ),
+                child: Text(
+                  'Visit Store',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.slate800,
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -775,11 +944,16 @@ class _PlaceholderBg extends StatelessWidget {
   const _PlaceholderBg({required this.colors, this.category});
 
   static const _catIcons = {
-    'Tech': Icons.laptop_mac_rounded,
+    'Electronics': Icons.laptop_mac_rounded,
     'Audio': Icons.headphones_rounded,
     'Wearables': Icons.watch_rounded,
-    'Lifestyle': Icons.auto_awesome_rounded,
+    'Fashion': Icons.checkroom_rounded,
     'Photography': Icons.camera_alt_rounded,
+    'Home & Living': Icons.chair_rounded,
+    'Beauty & Health': Icons.auto_awesome_rounded,
+    'Sports & Outdoors': Icons.fitness_center_rounded,
+    'Groceries': Icons.shopping_basket_rounded,
+    'Books & Media': Icons.menu_book_rounded,
   };
 
   @override

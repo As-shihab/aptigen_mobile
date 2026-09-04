@@ -6,7 +6,7 @@ class StaysService {
   StaysService(this._client);
 
   Future<List<StayModel>> getPublicStays() async {
-    final data = await _client.get('stays', isV8: false);
+    final data = await _client.get('public/stays', isV8: false);
     final List<dynamic> list = data is List
         ? data
         : (data as Map<String, dynamic>?)?['value'] as List<dynamic>? ?? [];
