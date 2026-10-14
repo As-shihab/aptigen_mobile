@@ -6,6 +6,9 @@ class AppStorage {
   static const _userKey = 'auth_user';
   static const _themeKey = 'theme_mode';
   static const _onboardKey = 'onboarding_seen';
+  // Same key the web market uses for its guest cart in localStorage.
+  static const _cartKey = 'aptigen.market.cart.v1';
+  static const _recentSearchKey = 'aptigen.market.recent_search';
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -27,7 +30,11 @@ class AppStorage {
     final prefs = await SharedPreferences.getInstance();
     final json = prefs.getString(_userKey);
     if (json == null) return null;
-    return jsonDecode(json) as Map<String, dynamic>;
+    try {
+      return jsonDecode(json) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> setUser(Map<String, dynamic> user) async {
@@ -53,5 +60,44 @@ class AppStorage {
   static Future<void> setOnboardingSeen() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_onboardKey, true);
+  }
+
+  static Future<List<dynamic>> getGuestCart() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cartKey);
+    if (raw == null) return [];
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is List ? decoded : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> setGuestCart(List<Map<String, dynamic>> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cartKey, jsonEncode(items));
+  }
+
+  static Future<List<String>> getRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_recentSearchKey) ?? [];
+  }
+
+  static Future<void> setRecentSearches(List<String> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_recentSearchKey, items);
+  }
+
+  /// Small id lists (recently viewed, compare) — same keys as the web
+  /// market's localStorage stores.
+  static Future<List<int>> getIdList(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(key) ?? []).map(int.tryParse).whereType<int>().toList();
+  }
+
+  static Future<void> setIdList(String key, List<int> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(key, ids.map((i) => '$i').toList());
   }
 }

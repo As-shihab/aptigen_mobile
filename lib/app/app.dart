@@ -38,7 +38,7 @@ class AptigenApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppController.themeMode,
       builder: (_, mode, __) => MaterialApp(
-        title: 'Aptigen',
+        title: 'Aptigen market',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),

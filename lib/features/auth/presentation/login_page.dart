@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/network/http_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_service.dart';
+import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -27,6 +28,24 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  Future<void> _openSignup() async {
+    final identifier = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const SignupPage()),
+    );
+    if (!mounted || identifier == null || identifier.isEmpty) return;
+    setState(() {
+      _emailCtrl.text = identifier;
+      _passCtrl.clear();
+      _error = null;
+    });
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('Account created — sign in to continue'),
+      ));
+  }
+
   Future<void> _login() async {
     final email = _emailCtrl.text.trim();
     final pass = _passCtrl.text;
@@ -40,11 +59,17 @@ class _LoginPageState extends State<LoginPage> {
     });
     try {
       await _auth.login(email, pass);
-      if (mounted) Navigator.pushReplacementNamed(context, '/home');
+      if (!mounted) return;
+      // Opened from inside the market (checkout, wishlist…) → go back there.
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context, true);
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } on ApiException catch (e) {
       setState(() {
         _error = e.statusCode == 401
-            ? 'Invalid email or password'
+            ? 'Invalid email, phone or password'
             : 'Login failed. Try again.';
       });
     } catch (_) {
@@ -98,16 +123,51 @@ class _LoginPageState extends State<LoginPage> {
                       onLogin: _login,
                     ),
                     const SizedBox(height: 20),
-                    Text(
-                      "Don't have an account? Contact us",
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: isDark
-                            ? AppColors.slate500
-                            : AppColors.slate400,
-                      ),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          "Don't have an account? ",
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: isDark
+                                ? AppColors.slate500
+                                : AppColors.slate400,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _loading ? null : _openSignup,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Text(
+                              'Create an account',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.accent,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: IconButton(
+                tooltip: Navigator.canPop(context) ? 'Close' : 'Continue as guest',
+                onPressed: () => Navigator.canPop(context)
+                    ? Navigator.pop(context, false)
+                    : Navigator.pushReplacementNamed(context, '/home'),
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: isDark ? AppColors.slate300 : AppColors.slate500,
                 ),
               ),
             ),
@@ -170,13 +230,12 @@ class _Brand extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
             color: isDark ? AppColors.white : AppColors.gray900,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Sign in to your account',
+          'Sign in to shop the market',
           style: GoogleFonts.poppins(
             fontSize: 14,
             color: isDark ? AppColors.slate400 : AppColors.slate500,
@@ -260,7 +319,7 @@ class _Card extends StatelessWidget {
               ],
               _InputField(
                 controller: emailCtrl,
-                label: 'Email address',
+                label: 'Email or phone',
                 hint: 'you@example.com',
                 icon: Icons.email_outlined,
                 isDark: isDark,
@@ -405,7 +464,7 @@ class _LoginButton extends StatelessWidget {
                         color: AppColors.white, strokeWidth: 2),
                   )
                 : Text(
-                    'Sign In',
+                    'Sign in',
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,

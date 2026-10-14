@@ -19,24 +19,24 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   static const _steps = [
     _Step(
-      heading: 'Your world,\none app.',
-      subtitle: '"Stays and a marketplace to shop —\neverything you love in one beautiful place."',
-      gradient: [Color(0xFF2563EB), Color(0xFF4F46E5)],
+      heading: 'The whole market,\nin your pocket.',
+      subtitle: 'Shop products from verified sellers\nacross the Aptigen network.',
+      gradient: [Color(0xFF0A6ED1), Color(0xFF0854A0)],
     ),
     _Step(
-      heading: 'Stays that\nfeel curated.',
-      subtitle: 'Browse villas, hotels, and resorts\nhandpicked from around the world.',
-      gradient: [Color(0xFF0891B2), Color(0xFF0D9488)],
+      heading: 'Deals worth\nthe scroll.',
+      subtitle: 'On-sale picks, featured listings\nand top vendors, updated daily.',
+      gradient: [Color(0xFFE11D48), Color(0xFFBE123C)],
     ),
     _Step(
-      heading: 'Shop the\nvery best.',
-      subtitle: 'Discover products from top brands\nwith fast delivery and easy returns.',
-      gradient: [Color(0xFF7C3AED), Color(0xFF9333EA)],
+      heading: 'Checkout\nin seconds.',
+      subtitle: 'Cash on delivery, a cart that follows you\nacross devices, and order tracking.',
+      gradient: [Color(0xFF059669), Color(0xFF047857)],
     ),
     _Step(
-      heading: "Let's go.",
-      subtitle: 'Everything you need, in one app.\nStart exploring today.',
-      gradient: [Color(0xFFEA580C), Color(0xFFDC2626)],
+      heading: "Let's shop.",
+      subtitle: 'Save favorites, follow stores\nand start exploring today.',
+      gradient: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
     ),
   ];
 
@@ -150,7 +150,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                         child: Text('aptigen',
                           style: GoogleFonts.poppins(
                             color: Colors.white, fontSize: 13,
-                            fontWeight: FontWeight.w800, letterSpacing: -0.3,
+                            fontWeight: FontWeight.w800,
                           )),
                       ),
                       AnimatedOpacity(

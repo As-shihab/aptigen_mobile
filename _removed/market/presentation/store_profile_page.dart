@@ -305,10 +305,11 @@ class _StoreProfilePageState extends State<StoreProfilePage>
                   (_, i) => ProductCard(
                     product: products[i],
                     isDark: isDark,
+                    heroTagPrefix: 'store-',
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ProductDetailPage(product: products[i]),
+                        builder: (_) => ProductDetailPage(product: products[i], heroTagPrefix: 'store-'),
                       ),
                     ),
                   ),

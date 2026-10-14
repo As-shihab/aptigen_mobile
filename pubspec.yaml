@@ -1,5 +1,5 @@
 name: aptigen_mobile
-description: Aptigen — stays, market & more
+description: Aptigen market — shop products from verified sellers
 publish_to: "none"
 
 version: 1.0.0+1
@@ -17,6 +17,7 @@ dependencies:
   cached_network_image: ^3.4.1
   image_picker: ^1.1.2
   file_picker: ^8.1.6
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
@@ -34,4 +35,8 @@ flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/icon/app_icon.png"
+  # Logo centred on white with space around it (legacy Android + iOS).
+  image_path: "assets/icon/app_icon_white.png"
+  # Android 8+ adaptive icon: white background, logo kept inside the safe zone.
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"

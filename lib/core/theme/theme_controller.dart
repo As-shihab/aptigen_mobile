@@ -16,6 +16,11 @@ class AppController {
     }
   }
 
+  static void setMode(ThemeMode mode) {
+    themeMode.value = mode;
+    AppStorage.setThemeMode(mode.name);
+  }
+
   static void toggle(BuildContext context) {
     final isDark = themeMode.value == ThemeMode.dark ||
         (themeMode.value == ThemeMode.system &&

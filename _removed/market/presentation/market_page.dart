@@ -180,11 +180,11 @@ class _MarketPageState extends State<MarketPage> {
   List<ProductModel> get _featuredListings =>
       _pool.where((p) => p.isFeatured).take(6).toList();
 
-  void _openDetail(ProductModel product) {
+  void _openDetail(ProductModel product, {String? heroTagPrefix}) {
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, animation, __) => ProductDetailPage(product: product),
+        pageBuilder: (_, animation, __) => ProductDetailPage(product: product, heroTagPrefix: heroTagPrefix),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 300),
@@ -321,7 +321,8 @@ class _MarketPageState extends State<MarketPage> {
                             child: ProductCard(
                               product: _onSaleListings[i],
                               isDark: isDark,
-                              onTap: () => _openDetail(_onSaleListings[i]),
+                              heroTagPrefix: 'onsale-',
+                              onTap: () => _openDetail(_onSaleListings[i], heroTagPrefix: 'onsale-'),
                             ),
                           ),
                         ),
@@ -351,7 +352,8 @@ class _MarketPageState extends State<MarketPage> {
                             child: ProductCard(
                               product: _featuredListings[i],
                               isDark: isDark,
-                              onTap: () => _openDetail(_featuredListings[i]),
+                              heroTagPrefix: 'featured-',
+                              onTap: () => _openDetail(_featuredListings[i], heroTagPrefix: 'featured-'),
                             ),
                           ),
                         ),
@@ -458,7 +460,8 @@ class _MarketPageState extends State<MarketPage> {
                           (_, i) => ProductCard(
                             product: _browse[i],
                             isDark: isDark,
-                            onTap: () => _openDetail(_browse[i]),
+                            heroTagPrefix: 'browse-',
+                            onTap: () => _openDetail(_browse[i], heroTagPrefix: 'browse-'),
                           ),
                           childCount: _browse.length,
                         ),

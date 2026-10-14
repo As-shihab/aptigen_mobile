@@ -13,12 +13,23 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onTap;
   final bool isDark;
 
+  /// Distinguishes this card's `Hero` from any other card showing the same
+  /// product elsewhere on the same page (e.g. a discounted+featured product
+  /// appears in both the "On Sale" and "Featured" rows at once) — Hero
+  /// requires unique tags within one route's subtree, so each section
+  /// passes its own prefix. Defaults to the bare product-id tag for
+  /// single-appearance contexts (wishlist, store profile).
+  final String? heroTagPrefix;
+
   const ProductCard({
     super.key,
     required this.product,
     required this.onTap,
     required this.isDark,
+    this.heroTagPrefix,
   });
+
+  String get _heroTag => 'product-image-${heroTagPrefix ?? ''}${product.id}';
 
   static const _catColors = {
     'Electronics': [Color(0xFF2563EB), Color(0xFF4F46E5)],
@@ -68,7 +79,7 @@ class ProductCard extends StatelessWidget {
               child: Stack(
                 children: [
                   Hero(
-                    tag: 'product-image-${product.id}',
+                    tag: _heroTag,
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(20)),

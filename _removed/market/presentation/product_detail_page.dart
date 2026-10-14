@@ -11,7 +11,10 @@ import 'store_profile_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final ProductModel product;
-  const ProductDetailPage({super.key, required this.product});
+  /// Must match the `heroTagPrefix` of whichever `ProductCard` was tapped to
+  /// get here — see `ProductCard.heroTagPrefix` for why this needs to vary.
+  final String? heroTagPrefix;
+  const ProductDetailPage({super.key, required this.product, this.heroTagPrefix});
 
   @override
   State<ProductDetailPage> createState() => _ProductDetailPageState();
@@ -86,7 +89,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           SizedBox(
             height: size.height * 0.46,
             width: double.infinity,
-            child: _ProductImageGallery(product: product, colors: colors),
+            child: _ProductImageGallery(product: product, colors: colors, heroTagPrefix: widget.heroTagPrefix),
           ),
           // Gradient fade bottom of image
           Positioned(
@@ -404,7 +407,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 class _ProductImageGallery extends StatefulWidget {
   final ProductModel product;
   final List<Color> colors;
-  const _ProductImageGallery({required this.product, required this.colors});
+  final String? heroTagPrefix;
+  const _ProductImageGallery({required this.product, required this.colors, this.heroTagPrefix});
 
   @override
   State<_ProductImageGallery> createState() => _ProductImageGalleryState();
@@ -433,7 +437,7 @@ class _ProductImageGalleryState extends State<_ProductImageGallery> {
       children: [
         images.isEmpty
             ? Hero(
-                tag: 'product-image-${widget.product.id}',
+                tag: 'product-image-${widget.heroTagPrefix ?? ''}${widget.product.id}',
                 child: placeholder,
               )
             : PageView.builder(
@@ -450,7 +454,7 @@ class _ProductImageGalleryState extends State<_ProductImageGallery> {
                   );
                   return i == 0
                       ? Hero(
-                          tag: 'product-image-${widget.product.id}',
+                          tag: 'product-image-${widget.heroTagPrefix ?? ''}${widget.product.id}',
                           child: image,
                         )
                       : image;

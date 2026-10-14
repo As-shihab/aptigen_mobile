@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Release builds have no network access without this (debug builds
+         get it injected from the debug manifest only). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Aptigen"
         android:name="${applicationName}"
@@ -40,6 +43,15 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- url_launcher: WhatsApp / web links, listing videos, store email -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="mailto"/>
         </intent>
     </queries>
 </manifest>
