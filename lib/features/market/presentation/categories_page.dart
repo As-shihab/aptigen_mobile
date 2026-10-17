@@ -63,7 +63,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
             crossAxisCount: width >= 600 ? 5 : 3,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.92,
+            // Fixed height that fits icon + two-line name + count (a width
+            // ratio left narrow phones ~25px short).
+            mainAxisExtent: scaledInfoHeight(context, 128),
           ),
           itemCount: _items!.length,
           itemBuilder: (_, i) {
@@ -94,12 +96,16 @@ class _CategoriesPageState extends State<CategoriesPage> {
                       Text(
                         c.name,
                         maxLines: 2,
+                        softWrap: true,
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12.5, height: 1.2, fontWeight: FontWeight.w600, color: p.text),
                       ),
                       const SizedBox(height: 2),
-                      Text('${c.count} items', style: TextStyle(fontSize: 11, color: p.textSecondary)),
+                      Text('${c.count} items',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: p.textSecondary)),
                     ],
                   ),
                 ),

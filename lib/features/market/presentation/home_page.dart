@@ -211,11 +211,11 @@ class _HomePageState extends State<HomePage> {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
                 sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    mainAxisExtent: 112,
+                    mainAxisExtent: scaledInfoHeight(context, 112),
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (_, i) => _PromoCard(_promos![i], i),
@@ -385,8 +385,13 @@ class _TopBar extends StatelessWidget {
         children: [
           Image.asset('assets/images/logo.png', width: 30, height: 30),
           const SizedBox(width: 8),
-          Text('Aptigen', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: p.text)),
-          const Spacer(),
+          Expanded(
+            child: Text('Aptigen',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: p.text)),
+          ),
+          const SizedBox(width: 8),
           ValueListenableBuilder<UserModel?>(
             valueListenable: Session.user,
             builder: (_, user, __) => GestureDetector(
@@ -421,8 +426,10 @@ class _TopBar extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child:
-                        Text('Search for a product or brand', style: TextStyle(fontSize: 14, color: p.textSecondary)),
+                    child: Text('Search for a product or brand',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 14, color: p.textSecondary)),
                   ),
                   Icon(Icons.search_rounded, size: 21, color: p.textSecondary),
                 ],
@@ -759,9 +766,13 @@ class _PromoCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            banner.ctaLabel!,
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                          Flexible(
+                            child: Text(
+                              banner.ctaLabel!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                            ),
                           ),
                           const SizedBox(width: 3),
                           const Icon(Icons.arrow_forward_rounded, size: 12, color: Colors.white),
@@ -1104,12 +1115,17 @@ class _CategorySkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
-        child: Row(
-          children: List.generate(
-            5,
-            (_) => const Padding(
-              padding: EdgeInsets.only(right: 14),
-              child: Skeleton(width: 60, height: 60, circle: true),
+        // Clipped, not overflowing, when the circles don't all fit the width.
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          child: Row(
+            children: List.generate(
+              5,
+              (_) => const Padding(
+                padding: EdgeInsets.only(right: 14),
+                child: Skeleton(width: 60, height: 60, circle: true),
+              ),
             ),
           ),
         ),

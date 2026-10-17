@@ -280,8 +280,13 @@ class ProductGridSkeleton extends StatelessWidget {
   }
 }
 
-/// Text area under the square photo on a [ProductTile].
-const double kTileInfoHeight = 132;
+/// Text area under the square photo on a [ProductTile], at 1x text size.
+const double kTileInfoHeight = 136;
+
+/// [base] grown with the user's font size, so fixed-height tile bodies
+/// still fit their text when the system font is larger (no overflow
+/// stripes). The app clamps text scale to 1.15x (see app.dart).
+double scaledInfoHeight(BuildContext context, double base) => MediaQuery.textScalerOf(context).scale(base);
 
 /// Two-column product grid sized so a tile is always a square photo plus a
 /// fixed info block — no overflow at any phone width.
@@ -294,6 +299,6 @@ SliverGridDelegate productGridDelegate(BuildContext context, {double horizontalP
     crossAxisCount: columns,
     crossAxisSpacing: spacing,
     mainAxisSpacing: 16,
-    mainAxisExtent: tileWidth + kTileInfoHeight,
+    mainAxisExtent: tileWidth + scaledInfoHeight(context, kTileInfoHeight),
   );
 }

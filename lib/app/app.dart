@@ -15,13 +15,11 @@ class _FadeSlideRoute extends PageRouteBuilder {
           reverseTransitionDuration: const Duration(milliseconds: 320),
           pageBuilder: (_, __, ___) => page,
           transitionsBuilder: (_, animation, __, child) {
-            final fade = CurvedAnimation(
-                parent: animation, curve: Curves.easeOut);
+            final fade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
             final slide = Tween<Offset>(
               begin: const Offset(0, 0.04),
               end: Offset.zero,
-            ).animate(CurvedAnimation(
-                parent: animation, curve: Curves.easeOutCubic));
+            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
             return FadeTransition(
               opacity: fade,
               child: SlideTransition(position: slide, child: child),
@@ -43,6 +41,15 @@ class AptigenApp extends StatelessWidget {
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         themeMode: mode,
+        // Large accessibility font sizes are honoured up to 1.15x — beyond
+        // that fixed-size tiles and bars overflow (the yellow/black stripes).
+        builder: (context, child) {
+          final mq = MediaQuery.of(context);
+          return MediaQuery(
+            data: mq.copyWith(textScaler: mq.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15)),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         initialRoute: '/splash',
         onGenerateRoute: (settings) {
           switch (settings.name) {

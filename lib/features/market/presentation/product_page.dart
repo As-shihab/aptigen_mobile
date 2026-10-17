@@ -728,7 +728,7 @@ class _TrustRow extends StatelessWidget {
         crossAxisCount: 2,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 3.6,
+        mainAxisExtent: scaledInfoHeight(context, 44),
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
         children: items.map((it) {
@@ -743,7 +743,10 @@ class _TrustRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                  child: Text(it.$2, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: p.text))),
+                  child: Text(it.$2,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12.5, height: 1.2, fontWeight: FontWeight.w500, color: p.text))),
             ],
           );
         }).toList(),

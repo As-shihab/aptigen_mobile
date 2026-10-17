@@ -84,7 +84,7 @@ class ProductTile extends StatelessWidget {
             ),
           ),
           SizedBox(
-            height: kTileInfoHeight,
+            height: scaledInfoHeight(context, kTileInfoHeight),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(2, 10, 2, 0),
               child: Column(
@@ -126,30 +126,39 @@ class ProductTile extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.end,
-                              spacing: 5,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  formatPrice(product.effectivePrice, product.currency),
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    height: 1.2,
-                                    fontWeight: FontWeight.w600,
-                                    color: flash != null ? AppColors.danger : p.text,
-                                  ),
-                                ),
-                                if (product.strikePrice != null)
-                                  Text(
-                                    formatPrice(product.strikePrice!, product.currency),
+                                Flexible(
+                                  child: Text(
+                                    formatPrice(product.effectivePrice, product.currency),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 11,
-                                      height: 1.5,
-                                      color: p.textTertiary,
-                                      decoration: TextDecoration.lineThrough,
-                                      decorationColor: p.textTertiary,
+                                      fontSize: 15,
+                                      height: 1.2,
+                                      fontWeight: FontWeight.w600,
+                                      color: flash != null ? AppColors.danger : p.text,
                                     ),
                                   ),
+                                ),
+                                if (product.strikePrice != null) ...[
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      formatPrice(product.strikePrice!, product.currency),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        height: 1.5,
+                                        color: p.textTertiary,
+                                        decoration: TextDecoration.lineThrough,
+                                        decorationColor: p.textTertiary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             if (flash != null)
@@ -320,7 +329,7 @@ class ProductRow extends StatelessWidget {
   Widget build(BuildContext context) {
     const width = 160.0;
     return SizedBox(
-      height: width + kTileInfoHeight,
+      height: width + scaledInfoHeight(context, kTileInfoHeight),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),

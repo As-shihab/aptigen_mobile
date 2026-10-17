@@ -82,64 +82,130 @@ class _HomeShellState extends State<HomeShell> {
           builder: (_, __) {
             final cartCount = CartStore.instance.count;
             final savedCount = WishlistStore.instance.value.length;
-            Widget badged(IconData icon, int count, Color color) => Badge(
-                  isLabelVisible: count > 0,
-                  backgroundColor: color,
-                  label: Text(count > 99 ? '99+' : '$count'),
-                  child: Icon(icon),
-                );
-            return NavigationBarTheme(
-              data: NavigationBarThemeData(
-                backgroundColor: p.card,
-                indicatorColor: p.accentSoft,
-                surfaceTintColor: Colors.transparent,
-                height: 66,
-                labelTextStyle: WidgetStateProperty.resolveWith(
-                  (s) => TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w500,
-                    color: s.contains(WidgetState.selected) ? p.accent : p.textSecondary,
-                  ),
-                ),
-                iconTheme: WidgetStateProperty.resolveWith(
-                  (s) => IconThemeData(size: 23, color: s.contains(WidgetState.selected) ? p.accent : p.textSecondary),
-                ),
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(border: Border(top: BorderSide(color: p.border))),
-                child: NavigationBar(
-                  selectedIndex: _index,
-                  onDestinationSelected: (i) => i == _search ? _openSearch() : _go(i),
-                  destinations: [
-                    const NavigationDestination(
-                      icon: Icon(Icons.storefront_outlined),
-                      selectedIcon: Icon(Icons.storefront_rounded),
-                      label: 'Home',
-                    ),
-                    const NavigationDestination(
-                      icon: Icon(Icons.grid_view_outlined),
-                      selectedIcon: Icon(Icons.grid_view_rounded),
-                      label: 'Categories',
-                    ),
-                    const NavigationDestination(
-                      icon: Icon(Icons.search_rounded),
-                      label: 'Search',
-                    ),
-                    NavigationDestination(
-                      icon: badged(Icons.favorite_border_rounded, savedCount, AppColors.danger),
-                      selectedIcon: badged(Icons.favorite_rounded, savedCount, AppColors.danger),
-                      label: 'Wishlist',
-                    ),
-                    NavigationDestination(
-                      icon: badged(Icons.shopping_bag_outlined, cartCount, p.accent),
-                      selectedIcon: badged(Icons.shopping_bag_rounded, cartCount, p.accent),
-                      label: 'Cart',
-                    ),
-                  ],
-                ),
-              ),
+            return _Dock(
+              index: _index,
+              onSelect: (i) => i == _search ? _openSearch() : _go(i),
+              items: [
+                const _DockItem(Icons.storefront_outlined, Icons.storefront_rounded, 'Home'),
+                const _DockItem(Icons.grid_view_outlined, Icons.grid_view_rounded, 'Categories'),
+                const _DockItem(Icons.search_rounded, Icons.search_rounded, 'Search'),
+                _DockItem(Icons.favorite_border_rounded, Icons.favorite_rounded, 'Wishlist',
+                    count: savedCount, badgeColor: AppColors.danger),
+                _DockItem(Icons.shopping_bag_outlined, Icons.shopping_bag_rounded, 'Cart',
+                    count: cartCount, badgeColor: p.accent),
+              ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _DockItem {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final int count;
+  final Color? badgeColor;
+  const _DockItem(this.icon, this.selectedIcon, this.label, {this.count = 0, this.badgeColor});
+}
+
+/// Bottom dock. Every slot gets an equal share of the width and its label
+/// scales down to fit on one line, so long labels ("Categories") never
+/// overflow on narrow phones or with a large system font.
+class _Dock extends StatelessWidget {
+  final int index;
+  final ValueChanged<int> onSelect;
+  final List<_DockItem> items;
+  const _Dock({required this.index, required this.onSelect, required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return Material(
+      color: p.card,
+      child: DecoratedBox(
+        decoration: BoxDecoration(border: Border(top: BorderSide(color: p.border))),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            height: 62,
+            child: Row(
+              children: [
+                for (var i = 0; i < items.length; i++)
+                  Expanded(child: _DockButton(item: items[i], selected: i == index, onTap: () => onSelect(i))),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DockButton extends StatelessWidget {
+  final _DockItem item;
+  final bool selected;
+  final VoidCallback onTap;
+  const _DockButton({required this.item, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final color = selected ? p.accent : p.textSecondary;
+    final count = item.count;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: count > 0 ? '${item.label}, $count' : item.label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                width: 52,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: selected ? p.accentSoft : Colors.transparent,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                alignment: Alignment.center,
+                child: Badge(
+                  isLabelVisible: count > 0,
+                  backgroundColor: item.badgeColor ?? p.accent,
+                  label: Text(count > 99 ? '99+' : '$count'),
+                  child: Icon(selected ? item.selectedIcon : item.icon, size: 22, color: color),
+                ),
+              ),
+              const SizedBox(height: 3),
+              // One line, never wider than the slot — shrinks instead of overflowing.
+              SizedBox(
+                height: 15,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    softWrap: false,
+                    textScaler: TextScaler.noScaling,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      height: 1.2,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

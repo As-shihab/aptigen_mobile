@@ -65,7 +65,7 @@ class FlashSaleCard extends StatelessWidget {
             ),
           ),
           SizedBox(
-            height: kFlashInfoHeight,
+            height: scaledInfoHeight(context, kFlashInfoHeight),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(2, 10, 2, 0),
               child: Column(
@@ -82,30 +82,39 @@ class FlashSaleCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.end,
-                          spacing: 5,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              formatPrice(l.effectivePrice, l.currency),
-                              style: const TextStyle(
-                                fontSize: 15,
-                                height: 1.2,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.danger,
-                              ),
-                            ),
-                            if (strike != null)
-                              Text(
-                                formatPrice(strike, l.currency),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  height: 1.5,
-                                  color: p.textTertiary,
-                                  decoration: TextDecoration.lineThrough,
-                                  decorationColor: p.textTertiary,
+                            Flexible(
+                              child: Text(
+                                formatPrice(l.effectivePrice, l.currency),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  height: 1.2,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.danger,
                                 ),
                               ),
+                            ),
+                            if (strike != null) ...[
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  formatPrice(strike, l.currency),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    height: 1.5,
+                                    color: p.textTertiary,
+                                    decoration: TextDecoration.lineThrough,
+                                    decorationColor: p.textTertiary,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -198,7 +207,7 @@ class FlashSaleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     const width = 150.0;
     return SizedBox(
-      height: width + kFlashInfoHeight,
+      height: width + scaledInfoHeight(context, kFlashInfoHeight),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -220,6 +229,6 @@ SliverGridDelegate flashGridDelegate(BuildContext context, {double horizontalPad
     crossAxisCount: columns,
     crossAxisSpacing: spacing,
     mainAxisSpacing: 16,
-    mainAxisExtent: tileWidth + kFlashInfoHeight,
+    mainAxisExtent: tileWidth + scaledInfoHeight(context, kFlashInfoHeight),
   );
 }
